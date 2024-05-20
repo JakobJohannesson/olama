@@ -1,25 +1,6 @@
-# Import required libraries
-import streamlit as st
-from autogen import AssistantAgent
-
-# Configuration list for llama3 model
-config_list = [
-    {
-        "model": "llama3",
-        "base_url": "http://localhost:11434/v1",
-        "api_key": "ollama",
-    }
-]
-
-# Initialize the intern (Assistant Agent)
-intern = AssistantAgent("intern", llm_config={"config_list": config_list})
-
-# Initialize the manager (Warren Buffett)
-manager = AssistantAgent("WarrenBuffett", llm_config={"config_list": config_list})
-
-
 import streamlit as st
 import ollama
+import time
 
 # Function to generate response from stream
 def generate_response(stream):
@@ -58,7 +39,7 @@ def stream_response(model, messages, placeholder, update_frequency=5):
         model (str): The model to use for generating the response.
         messages (list): The messages to send to the model.
         placeholder (st.empty): The Streamlit placeholder to display the response.
-        update_frequency (int): Numbers of chunks after which to update the display.
+        update_frequency (int): Number of chunks after which to update the display.
     """
     try:
         stream = ollama.chat(model=model, messages=messages, stream=True)
@@ -89,40 +70,48 @@ st.write("**Left**: Intern's Response (Draft)\n\n**Right**: Manager's Feedback (
 
 col1, col2 = st.columns(2)
 
-# Define the messages for generating an equity research paper
-intern_message = {
-    'role': 'user',
-    'content': """
-    Please write a draft of an equity research paper that includes the following:
-    1. Background on the operations of the business.
-    2. A table with the stock price information for the company, including:
-       - Date
-       - Opening Price
-       - Closing Price
-       - High
-       - Low
-       - Volume
-    3. Provide a detailed analysis of the stock performance and future outlook.
+# Define the segments of the equity research paper
+segments = [
+    {
+        'role': 'user',
+        'content': """
+        Please write the introduction and background of the Apple's operations.
+        """
+    },
+    {
+        'role': 'user',
+        'content': """
+        Provide a detailed analysis of the Apple's financial performance.
+        """
+    },
+    {
+        'role': 'user',
+        'content': """
+        Discuss the competitive landscape and the Apple's market position.
+        """
+    },
+    {
+        'role': 'user',
+        'content': """
+        Analyze the Apple's stock price performance and provide a future outlook.
+        """
+    }
+]
 
-    Company: Apple Inc
-    """
-}
+# Stream responses back and forth for each segment
+for segment in segments:
+    # Stream the intern's response
+    with col1:
+        st.subheader("Intern's Response")
+        intern_placeholder = st.empty()
+        stream_response(model='llama3', messages=[segment], placeholder=intern_placeholder, update_frequency=3)
 
-manager_message = {
-    'role': 'user',
-    'content': """
-    Provide feedback on the draft equity research paper written by the intern. Make sure to use a fundamental research approach and give detailed input on areas that need improvement or further analysis.
-    """
-}
-
-# Stream the intern's response
-with col1:
-    st.subheader("Intern's Response")
-    intern_placeholder = st.empty()
-    stream_response(model='llama3', messages=[intern_message], placeholder=intern_placeholder)
-
-# Stream the manager's feedback
-with col2:
-    st.subheader("Manager's Feedback")
-    manager_placeholder = st.empty()
-    stream_response(model='llama3', messages=[manager_message], placeholder=manager_placeholder)
+    # Stream the manager's feedback
+    with col2:
+        st.subheader("Manager's Feedback")
+        manager_placeholder = st.empty()
+        manager_feedback_message = {
+            'role': 'user',
+            'content': f"Provide feedback on the following segment: {segment['content']}"
+        }
+        stream_response(model='llama3', messages=[manager_feedback_message], placeholder=manager_placeholder, update_frequency=3)

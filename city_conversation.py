@@ -1,6 +1,5 @@
 import streamlit as st
 import ollama
-import time
 
 # Function to generate response from stream
 def generate_response(stream):
@@ -62,56 +61,43 @@ def stream_response(model, messages, placeholder, update_frequency=5):
             full_response = concatenate_partial_response(partial_response, full_response, placeholder)
     
     except Exception as e:
-        placeholder.error(f"An error occurred while fetching the response: {e}")
+        placeholder.markdown(f"An error occurred while fetching the response: {e}")
 
 # Streamlit app
-st.title("Equity Research Paper Collaboration")
-st.write("**Left**: Intern's Response (Draft)\n\n**Right**: Manager's Feedback (Warren Buffett)")
+st.title("Favorite City Conversation")
+st.write("**Left**: Intern's Response\n\n**Right**: Manager's Response")
 
 col1, col2 = st.columns(2)
 
-# Define the segments of the equity research paper
-segments = [
-    {
-        'role': 'user',
-        'content': """
-        Please write the introduction and background of the Apple's operations. write at most 1 sentences.
-        """
-    },
-    {
-        'role': 'user',
-        'content': """
-        Provide a detailed analysis of the Apple's financial performance. write at most 1 sentences.
-        """
-    },
-    {
-        'role': 'user',
-        'content': """
-        Discuss the competitive landscape and the Apple's market position. write at most 1 sentences.
-        """
-    },
-    {
-        'role': 'user',
-        'content': """
-        Analyze the Apple's stock price performance and provide a future outlook. write at most 1 sentences.
-        """
-    }
+# Initialize the conversation
+conversation = [
+    {"role": "user", "content": "Your favorite city is London. Your goal is to figure out the other person's favorite city without directly telling your own. Never ever tell what your favorite city is."},
+    {"role": "user", "content": "Your favorite city is Mumbai. This is your secret which others are trying to figure out. Let's talk about our favorite cities. What's yours?"}
 ]
 
-# Stream responses back and forth for each segment
-for segment in segments:
-    # Stream the intern's response
-    with col1:
-        st.subheader("Intern's Response")
-        intern_placeholder = st.empty()
-        stream_response(model='llama3', messages=[segment], placeholder=intern_placeholder, update_frequency=3)
+# Function to handle the back-and-forth conversation
+def handle_conversation(conversation, model, intern_placeholder, manager_placeholder, update_frequency=5):
+    intern_full_response = ""
+    manager_full_response = ""
 
-    # Stream the manager's feedback
-    with col2:
-        st.subheader("Manager's Feedback")
-        manager_placeholder = st.empty()
-        manager_feedback_message = {
-            'role': 'user',
-            'content': f"Provide feedback on the following segment: {segment['content']}"
-        }
-        stream_response(model='llama3', messages=[manager_feedback_message], placeholder=manager_placeholder, update_frequency=3)
+    for i in range(5):  # Limit to 5 exchanges for brevity
+        # Intern responds
+        intern_response = []
+        stream_response(model, conversation, intern_placeholder, update_frequency)
+        intern_full_response += "".join(intern_response)
+        conversation.append({"role": "assistant", "content": intern_full_response})
+        intern_placeholder.markdown(intern_full_response)
+
+        # Manager responds
+        manager_response = []
+        stream_response(model, conversation, manager_placeholder, update_frequency)
+        manager_full_response += "".join(manager_response)
+        conversation.append({"role": "assistant", "content": manager_full_response})
+        manager_placeholder.markdown(manager_full_response)
+
+# Placeholders for responses
+intern_placeholder = col1.empty()
+manager_placeholder = col2.empty()
+
+# Start the conversation
+handle_conversation(conversation, 'llama3', intern_placeholder, manager_placeholder, update_frequency=3)

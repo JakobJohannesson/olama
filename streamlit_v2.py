@@ -104,7 +104,7 @@ for segment in segments:
     with col1:
         st.subheader("Intern's Response")
         intern_placeholder = st.empty()
-        stream_response(model='llama3', messages=[segment], placeholder=intern_placeholder, update_frequency=3)
+        stream_response(model='codellama', messages=[segment], placeholder=intern_placeholder, update_frequency=3)
 
     # Stream the manager's feedback
     with col2:
